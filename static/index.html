@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>协和线交台</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>协和线交台</h1>
+    <p>Wetherill / Tera-Wasserburg 数据、协方差、交点年龄与分支重放</p>
+  </div>
+  <div class="actions">
+    <button id="resetBtn">清空并恢复夹具</button>
+    <button id="exportBtn">导出运行记录</button>
+    <label class="file">导入复核<input id="importFile" type="file" accept="application/json"></label>
+  </div>
+</header>
+<main>
+  <section class="panel controls">
+    <label>数据集<select id="datasetSelect"></select></label>
+    <label>原始口径（夹具固定）<input id="sourceConventionText" readonly></label>
+    <label>绘图/回归口径<select id="targetConvention"><option value="wetherill">Wetherill</option><option value="tera_wasserburg">Tera-Wasserburg</option></select></label>
+    <button id="runBtn" class="primary">求解</button>
+  </section>
+  <section class="grid">
+    <div class="panel"><h2>相关图与误差椭圆</h2><canvas id="plot" width="760" height="560"></canvas><div id="diagnostic" class="diagnostic"></div></div>
+    <div class="panel"><h2>点、共同铅与影响</h2><div id="pointTable"></div></div>
+  </section>
+  <section class="grid">
+    <div class="panel"><h2>分支</h2><div class="row"><input id="branchName" placeholder="分支名称，例如：排除 NC-3"><button id="branchBtn">保存当前包含关系</button></div><div id="branches"></div><h3>两个候选并排</h3><div class="row"><select id="compareA"></select><select id="compareB"></select><button id="compareBtn">比较点级残差</button></div><div id="comparison"></div></div>
+    <div class="panel"><h2>求解结果</h2><pre id="summary"></pre></div>
+  </section>
+  <section class="panel"><h2>运行指纹与路径</h2><pre id="runs"></pre></section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

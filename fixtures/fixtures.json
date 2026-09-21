@@ -1,0 +1,192 @@
+[
+  {
+    "id": "normal-chord",
+    "name": "正常协和交线",
+    "description": "四个带方向误差椭圆的点，位于 200–1200 Ma 协和交线上。",
+    "common_lead_default": "记录值，逐点保留共同铅校正来源",
+    "points": [
+      {
+        "id": "n1",
+        "name": "NC-1",
+        "x": 0.3,
+        "y": 0.038484843318254525,
+        "sx": 0.035,
+        "sy": 0.0038,
+        "rho": 0.22,
+        "lead_source": "Stacey–Kramers 两阶段铅",
+        "lead_note": ""
+      },
+      {
+        "id": "n2",
+        "name": "NC-2",
+        "x": 0.8,
+        "y": 0.08085536753830107,
+        "sx": 0.028,
+        "sy": 0.0038,
+        "rho": -0.31,
+        "lead_source": "样品内 204Pb 校正",
+        "lead_note": ""
+      },
+      {
+        "id": "n3",
+        "name": "NC-3",
+        "x": 1.4,
+        "y": 0.13169999660235693,
+        "sx": 0.035,
+        "sy": 0.0046,
+        "rho": 0.48,
+        "lead_source": "Stacey–Kramers 两阶段铅",
+        "lead_note": ""
+      },
+      {
+        "id": "n4",
+        "name": "NC-4",
+        "x": 2.0,
+        "y": 0.1825446256664128,
+        "sx": 0.028,
+        "sy": 0.0046,
+        "rho": -0.18,
+        "lead_source": "空白铅扣除",
+        "lead_note": ""
+      }
+    ],
+    "native_convention": "wetherill"
+  },
+  {
+    "id": "validation-mix",
+    "name": "正常点与相关系数越界点",
+    "description": "一个可回归椭圆与一个 rho 越界点；越界点不参与拟合也不绘制椭圆。",
+    "common_lead_default": "混合校正来源",
+    "points": [
+      {
+        "id": "v1",
+        "name": "有效椭圆",
+        "x": 0.8,
+        "y": 0.08085536753830107,
+        "sx": 0.03,
+        "sy": 0.004,
+        "rho": 0.25,
+        "lead_source": "Stacey–Kramers 两阶段铅",
+        "lead_note": ""
+      },
+      {
+        "id": "v2",
+        "name": "rho 越界",
+        "x": 1.4,
+        "y": 0.13169999660235693,
+        "sx": 0.03,
+        "sy": 0.004,
+        "rho": 1.34,
+        "lead_source": "204Pb 实测校正",
+        "lead_note": "此点 rho=1.34，必须拒绝并禁止椭圆生成"
+      }
+    ],
+    "native_convention": "wetherill"
+  },
+  {
+    "id": "wetherill-tangent",
+    "name": "Wetherill 1000 Ma 切点",
+    "description": "精确位于 1000 Ma Wetherill 协和线切线上的数据，应诊断为单重不稳定解。",
+    "common_lead_default": "无外加共同铅",
+    "points": [
+      {
+        "id": "w1",
+        "name": "WT-1",
+        "x": 1.2,
+        "y": 0.13500509015326398,
+        "sx": 0.03,
+        "sy": 0.0032,
+        "rho": 0.15,
+        "lead_source": "无共同铅校正：Wetherill 原生比值",
+        "lead_note": ""
+      },
+      {
+        "id": "w2",
+        "name": "WT-2",
+        "x": 1.5,
+        "y": 0.15561556373460278,
+        "sx": 0.03,
+        "sy": 0.0032,
+        "rho": -0.25,
+        "lead_source": "无共同铅校正：Wetherill 原生比值",
+        "lead_note": ""
+      },
+      {
+        "id": "w3",
+        "name": "WT-3",
+        "x": 1.85,
+        "y": 0.17966111624616465,
+        "sx": 0.03,
+        "sy": 0.0032,
+        "rho": 0.35,
+        "lead_source": "无共同铅校正：Wetherill 原生比值",
+        "lead_note": ""
+      },
+      {
+        "id": "w4",
+        "name": "WT-4",
+        "x": 2.2,
+        "y": 0.20370666875772658,
+        "sx": 0.03,
+        "sy": 0.0032,
+        "rho": -0.42,
+        "lead_source": "无共同铅校正：Wetherill 原生比值",
+        "lead_note": ""
+      }
+    ],
+    "native_convention": "wetherill"
+  },
+  {
+    "id": "tera-wasserburg-tangent",
+    "name": "Tera-Wasserburg 1000 Ma 切点",
+    "description": "精确位于 1000 Ma Tera-Wasserburg 协和曲线切线上的数据，应诊断为切点而非两个近邻根。",
+    "common_lead_default": "回归截距共同铅",
+    "points": [
+      {
+        "id": "t1",
+        "name": "TT-1",
+        "x": 4.0,
+        "y": 0.0834094859268172,
+        "sx": 0.18,
+        "sy": 0.0018,
+        "rho": -0.2,
+        "lead_source": "未校正：TW 截距由回归估计",
+        "lead_note": ""
+      },
+      {
+        "id": "t2",
+        "name": "TT-2",
+        "x": 5.0,
+        "y": 0.07785800179362709,
+        "sx": 0.18,
+        "sy": 0.0018,
+        "rho": 0.3,
+        "lead_source": "未校正：TW 截距由回归估计",
+        "lead_note": ""
+      },
+      {
+        "id": "t3",
+        "name": "TT-3",
+        "x": 6.5,
+        "y": 0.06953077559384194,
+        "sx": 0.18,
+        "sy": 0.0018,
+        "rho": -0.4,
+        "lead_source": "未校正：TW 截距由回归估计",
+        "lead_note": ""
+      },
+      {
+        "id": "t4",
+        "name": "TT-4",
+        "x": 7.5,
+        "y": 0.06397929146065184,
+        "sx": 0.18,
+        "sy": 0.0018,
+        "rho": 0.18,
+        "lead_source": "未校正：TW 截距由回归估计",
+        "lead_note": ""
+      }
+    ],
+    "native_convention": "tera_wasserburg"
+  }
+]
