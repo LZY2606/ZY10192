@@ -1,0 +1,9 @@
+pub const EQUATION_VERSION: &str = "upb-wetherill-tw-constants-v1";
+pub const LAMBDA_235_PER_YEAR: f64 = 9.848_5e-10;
+pub const LAMBDA_238_PER_YEAR: f64 = 1.551_25e-10;
+pub const U238_OVER_U235: f64 = 137.88;
+pub const MAX_AGE_YEARS: f64 = 5.0e9;
+pub const ROOT_GRID_COUNT: usize = 4096;
+pub const TANGENT_AGE_GAP_YEARS: f64 = 100.0e6;
+pub const TANGENT_VALUE_TOLERANCE: f64 = 1.0e-7;
+pub const NEAR_TANGENT_VALUE_TOLERANCE: f64 = 1.0e-4;

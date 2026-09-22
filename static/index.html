@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>协和线交台</title>
+<style>
+:root{color-scheme:light;font-family:Inter,"Noto Sans SC",system-ui,sans-serif;background:#f6f3ec;color:#202124}
+body{margin:0}
+header{padding:22px 28px;background:#243447;color:white;display:flex;justify-content:space-between;gap:16px;align-items:flex-end}
+h1{margin:0;font-size:28px;letter-spacing:.08em}
+.subtitle{opacity:.82;margin-top:6px}
+main{padding:20px 28px;max-width:1500px;margin:auto}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+button,.select,select,input{border:1px solid #b9b1a2;border-radius:8px;padding:8px 12px;background:white;font:inherit}
+button{cursor:pointer;background:#2f5d7c;color:white;border-color:#2f5d7c}
+button.secondary{background:white;color:#243447}
+button.danger{background:#8d3b3b;border-color:#8d3b3b}
+.grid{display:grid;grid-template-columns:minmax(620px,1.7fr) minmax(360px,.8fr);gap:16px}
+.card{background:white;border:1px solid #ddd6c9;border-radius:12px;padding:16px;box-shadow:0 1px 3px #0001}
+canvas{width:100%;height:560px;background:#fbfaf7;border-radius:8px}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{background:#f6f3ec;border-radius:8px;padding:10px}
+.metric b{display:block;font-size:18px;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid #e5dfd2;padding:7px 6px;text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:white;z-index:1}
+.scroll{max-height:340px;overflow:auto;border:1px solid #e5dfd2;border-radius:8px}
+.pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;background:#e8eef2;color:#234b63;margin:1px}
+.bad{background:#f9e4df;color:#8d3b3b}
+.warn{background:#fff0c2;color:#7a5a00}
+.ok{background:#e1f1e2;color:#24602e}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+pre{white-space:pre-wrap;word-break:break-word;background:#f6f3ec;padding:10px;border-radius:8px;max-height:280px;overflow:auto}
+.muted{color:#6a655b;font-size:13px}
+.point{cursor:pointer}
+.point.active{outline:3px solid #e0a54d;outline-offset:-3px}
+@media(max-width:1000px){.grid,.two{grid-template-columns:1fr}canvas{height:430px}}
+</style>
+</head>
+<body>
+<header>
+<div><h1>协和线交台</h1><div class="subtitle">Wetherill / Tera-Wasserburg 数据、协方差、交台诊断与可回放运行记录</div></div>
+<div class="muted" style="color:#eee" id="equation"></div>
+</header>
+<main>
+<div class="toolbar">
+<label>运行 <select id="runSelect" class="select"></select></label>
+<label>图件口径
+<select id="conventionSelect"><option value="wetherill">Wetherill</option><option value="tw">Tera-Wasserburg</option></select>
+</label>
+<button id="branchBtn" class="secondary">建立排除分支</button>
+<button id="resetBtn" class="secondary">重置分支</button>
+<button id="fixturesBtn" class="secondary">恢复固定 fixture</button>
+<button id="exportBtn">导出运行记录</button>
+<label class="secondary" style="padding:0;border:0"><input id="importFile" type="file" accept="application/json" hidden><button type="button" id="importBtn" class="secondary">导入复核</button></label>
+<button id="clearBtn" class="danger">清空数据库</button>
+</div>
+<div class="grid">
+<section class="card">
+<canvas id="plot" width="900" height="560"></canvas>
+<p class="muted">点击数据点选择；蓝色为 2σ 误差椭圆，橙色为分支回归线。越界或变换后非正定的点不绘制椭圆，只在校验中保留。</p>
+<div class="scroll"><table id="compareTable"></table></div>
+</section>
+<aside class="card">
+<h3 id="runName"></h3>
+<div id="fingerprint" class="muted"></div>
+<div class="metrics" id="metrics" style="margin:12px 0"></div>
+<div id="warnings"></div>
+<h3>点级信息</h3>
+<div class="scroll"><table id="pointTable"></table></div>
+<h3>选中点</h3>
+<pre id="pointDetail">未选择</pre>
+<h3>求解保留信息</h3>
+<pre id="trace"></pre>
+</aside>
+</div>
+</main>
+<script>
+const TWO_SIGMA=2;
+let runs=[],run=null,branch=null,selectedId=null,convention='wetherill';
+const $=id=>document.getElementById(id);
+const fmt=(x,n=5)=>typeof x!=='number'||!Number.isFinite(x)?String(x):x.toFixed(n);
+const age=x=>x==null?'—':(x/1e6).toFixed(2)+' Ma';
+async function api(path,options={}){const response=await fetch(path,{headers:{'Content-Type':'application/json'},...options});if(!response.ok)throw new Error(await response.text());return response.status===204?null:response.json();}
+async function refresh(){runs=await api('/api/runs');renderRuns();run=runs.find(x=>x.id===$('runSelect').value)||runs[0];if(run){$('runSelect').value=run.id;await resetBranch();}renderAll();}
+async function resetBranch(){if(!run)return;selectedId=null;branch=await api(`/api/runs/${encodeURIComponent(run.id)}/branches`,{method:'POST',body:JSON.stringify({excluded_point_ids:[]})});}
+function renderRuns(){const current=run?.id;$('runSelect').innerHTML=runs.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');if(current&&runs.some(r=>r.id===current))$('runSelect').value=current;}
+
+function coord(point){return convention==='wetherill'?point.wetherill:point.tera_wasserburg;}
+function axisLabels(){return convention==='wetherill'?['207Pb/235U','206Pb/238U']:['238U/206Pb','207Pb/206Pb'];}
+function eigenvalues(c){const t=(c.xx+c.yy)/2,d=.5*Math.sqrt((c.xx-c.yy)**2+4*c.xy**2);let l1=t+d,l2=t-d,vx=c.xy,vy=l1-c.xx,n=Math.hypot(vx,vy)||1;return {l1,l2,x:vx/n,y:vy/n};}
+function concordiaW(age){const x=Math.exp(run.constants.lambda_235_per_year*age)-1,y=Math.exp(run.constants.lambda_238_per_year*age)-1;return {x,y};}
+function concordiaPoint(age){const w=concordiaW(age);return convention==='wetherill'?w:{x:1/w.y,y:w.x/(run.constants.u238_over_u235*w.y)};}
+function plotValues(){let vals=run.points.filter(p=>p.ellipse_available).map(coord);for(let a=0;a<=4.5e9;a+=25e6){const p=concordiaPoint(a);if(Number.isFinite(p.x)&&Number.isFinite(p.y))vals.push(p);}if(branch.fit){const xs=vals.map(v=>v.x);const pad=(Math.max(...xs)-Math.min(...xs))*.08;for(let x=Math.min(...xs)-pad;x<=Math.max(...xs)+pad;x+=(Math.max(...xs)-Math.min(...xs))/300)vals.push({x,y:branch.fit.slope*x+branch.fit.intercept});}return vals;}
+function draw(){
+ const canvas=$('plot'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,m=58;ctx.clearRect(0,0,w,h);
+ if(!run){return;}
+ const values=plotValues();const xs=values.map(v=>v.x),ys=values.map(v=>v.y);
+ let minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+ const padX=(maxX-minX)*.08,padY=(maxY-minY)*.08;minX-=padX;maxX+=padX;minY-=padY;maxY+=padY;
+ const sx=x=>m+(x-minX)/(maxX-minX)*(w-2*m);const sy=y=>h-m-(y-minY)/(maxY-minY)*(h-2*m);
+ ctx.strokeStyle='#d8d2c6';ctx.lineWidth=1;ctx.fillStyle='#333';ctx.font='13px sans-serif';
+ for(let i=0;i<=8;i++){const x=m+i*(w-2*m)/8,y=h-m-i*(h-2*m)/8;ctx.beginPath();ctx.moveTo(x,m);ctx.lineTo(x,h-m);ctx.stroke();ctx.beginPath();ctx.moveTo(m,y);ctx.lineTo(w-m,y);ctx.stroke();ctx.fillText((minX+(maxX-minX)*i/8).toFixed(2),x-18,h-m+18);ctx.fillText((minY+(maxY-minY)*i/8).toFixed(2),6,y+4);}
+ const [xlabel,ylabel]=axisLabels();ctx.fillText(xlabel,w/2-30,h-15);ctx.save();ctx.translate(16,h/2);ctx.rotate(-Math.PI/2);ctx.fillText(ylabel,0,0);ctx.restore();
+ ctx.strokeStyle='#68925d';ctx.lineWidth=2.4;ctx.beginPath();let started=false;for(let a=0;a<=4.5e9;a+=5e6){const p=concordiaPoint(a);if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<minX||p.x>maxX||p.y<minY||p.y>maxY){started=false;continue;}if(!started){ctx.moveTo(sx(p.x),sy(p.y));started=true;}else ctx.lineTo(sx(p.x),sy(p.y));}ctx.stroke();
+ if(branch.fit){ctx.strokeStyle='#e09b35';ctx.lineWidth=2.4;ctx.beginPath();let first=true;const range=maxX-minX;for(let x=minX;x<=maxX;x+=range/500){const y=branch.fit.slope*x+branch.fit.intercept;if(y<minY||y>maxY){first=true;continue;}if(first){ctx.moveTo(sx(x),sy(y));first=false}else ctx.lineTo(sx(x),sy(y));}ctx.stroke();}
+ for(const p of run.points){const c=coord(p);if(!p.ellipse_available)continue;const e=eigenvalues(c.covariance),angle=Math.atan2(e.y,e.x);ctx.save();ctx.translate(sx(c.x),sy(c.y));ctx.rotate(angle);ctx.strokeStyle=branch.excluded_point_ids.includes(p.id)?'#b55b5b':'#2b679d';ctx.fillStyle=branch.excluded_point_ids.includes(p.id)?'#b55b5b33':'#2b679d18';ctx.lineWidth=selectedId===p.id?3:1.5;ctx.beginPath();ctx.ellipse(0,0,TWO_SIGMA*Math.sqrt(Math.max(e.l1,0))*(w-2*m)/(maxX-minX),TWO_SIGMA*Math.sqrt(Math.max(e.l2,0))*(h-2*m)/(maxY-minY),0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();ctx.fillStyle='#18324a';ctx.beginPath();ctx.arc(sx(c.x),sy(c.y),3.5,0,Math.PI*2);ctx.fill();ctx.fillText(p.id,sx(c.x)+6,sy(c.y)-6);}
+}
+function renderMetrics(){const ages=branch.intersections||[];$('metrics').innerHTML=ages.map(a=>`<div class="metric"><span class="pill ${a.stable?'ok':'warn'}">${a.kind==='tangent_double_root'?'切触双重根':'单重交点'}</span><b>${a.label}<br>${age(a.age_years)}</b><span class="muted">1σ ${age(a.one_sigma_years)}；放大 ${a.error_amplification==null?'—':Number.isFinite(a.error_amplification)?fmt(a.error_amplification,3):'∞'}</span></div>`).join('')+(branch.fit?`<div class="metric"><span>MSWD</span><b>${fmt(branch.fit.mswd,3)}</b><span class="muted">χ² ${fmt(branch.fit.chi_square,3)} / ${branch.fit.degrees_of_freedom}</span></div><div class="metric"><span>协方差条件数</span><b>${fmt(branch.fit.condition_number,3)}</b><span class="muted">slope ${fmt(branch.fit.slope,6)}；b ${fmt(branch.fit.intercept,6)}</span></div>`:'');}
+function renderTables(){
+ $('pointTable').innerHTML='<tr><th>点</th><th>口径/共同铅</th><th>发散度</th><th>状态</th></tr>'+run.points.map(p=>`<tr class="point ${selectedId===p.id?'active':''}" data-id="${p.id}"><td><b>${p.label}</b><br>${p.id}</td><td>W + TW 已回转<br><span class="pill">${p.common_lead.source}</span></td><td>${p.discordance_percent==null?'—':fmt(p.discordance_percent,2)+'%'}</td><td>${p.valid?'<span class="pill ok">有椭圆</span>':p.errors.map(e=>`<span class="pill bad">${e}</span>`).join('')}</td></tr>`).join('');
+ const rows=branch.residual_rows||[];const by=Object.fromEntries(rows.map(r=>[r.point_id,r]));
+ $('compareTable').innerHTML='<tr><th>点</th><th>归一残差</th><th>杠杆</th><th>Cook D</th><th>排除后 Δ下交点</th><th>排除后 Δ上交点</th></tr>'+run.points.filter(p=>p.valid).map(p=>{const r=by[p.id]||{};return `<tr><td>${p.label}<br><span class="muted">${p.id}</span></td><td>${fmt(r.normalized_residual,3)}</td><td>${fmt(r.leverage,4)}</td><td>${fmt(r.cooks_distance,4)}</td><td>${age(r.delta_lower_age_years)}</td><td>${age(r.delta_upper_age_years)}</td></tr>`}).join('');
+ document.querySelectorAll('.point').forEach(el=>el.onclick=()=>{selectedId=el.dataset.id;renderAll();});
+}
+function renderDetail(){const p=run.points.find(p=>p.id===selectedId),c=p?coord(p):null;$('pointDetail').textContent=p?JSON.stringify({id:p.id,common_lead:p.common_lead,convention,coordinate:c,discordance_percent:p.discordance_percent,errors:p.errors},null,2):'未选择';
+ const trace={initial:branch.trace?{theta_rad:branch.trace.initial_theta_rad,normal_intercept:branch.trace.initial_intercept_normal}:null,converged:branch.trace?.converged,iterations:branch.trace?.iterations,path_tail:branch.trace?.path?.slice(-6),intersection_traces:(branch.intersections||[]).map(a=>({label:a.label,age_years:a.age_years,stable:a.stable,multiplicity:a.multiplicity,trace:a.trace}))};$('trace').textContent=JSON.stringify(trace,null,2);
+ $('warnings').innerHTML=(branch.warnings||[]).map(w=>`<p><span class="pill warn">${w}</span></p>`).join('');}
+function renderAll(){if(!run)return;$('runName').textContent=run.name;$('fingerprint').textContent=`fingerprint ${run.fingerprint} · ${run.equation_version}`;$('equation').textContent=`λ235=${run.constants.lambda_235_per_year}, λ238=${run.constants.lambda_238_per_year}, 238U/235U=${run.constants.u238_over_u235}`;draw();renderMetrics();renderTables();renderDetail();}
+$('runSelect').onchange=async()=>{run=runs.find(r=>r.id===$('runSelect').value);await resetBranch();renderAll();};
+$('conventionSelect').onchange=e=>{convention=e.target.value;renderAll();};
+$('branchBtn').onclick=async()=>{if(!selectedId)return alert('先点击选择一个点');let excluded=[...new Set(branch.excluded_point_ids.concat(selectedId))];branch=await api(`/api/runs/${encodeURIComponent(run.id)}/branches`,{method:'POST',body:JSON.stringify({excluded_point_ids:excluded})});renderAll();};
+$('resetBtn').onclick=resetBranch.then(renderAll);
+$('fixturesBtn').onclick=async()=>{runs=await api('/api/fixtures/reset',{method:'POST'});run=runs[0];$('runSelect').value=run.id;await resetBranch();renderAll();};
+$('clearBtn').onclick=async()=>{if(confirm('清空 SQLite 中全部运行记录？')){await api('/api/runs/clear',{method:'POST'});runs=[];run=null;branch=null;renderAll();$('runSelect').innerHTML='';}};
+$('exportBtn').onclick=()=>location.href='/api/export';
+$('importFile').onchange=async e=>{const text=await e.target.files[0].text();JSON.parse(text);await api('/api/import',{method:'POST',body:text});await refresh();e.target.value='';};
+$('importBtn').onclick=()=>$('importFile').click();
+refresh().catch(error=>alert(error));
+</script>
+</body>
+</html>
